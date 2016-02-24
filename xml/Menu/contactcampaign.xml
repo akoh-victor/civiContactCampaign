@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <menu>
   <item>
-    <path>civicrm/contactcampaignlist</path>
+    <path>civicrm/campaignlist</path>
     <page_callback>CRM_Contactcampaign_Page_CampaignList</page_callback>
     <title>CampaignList</title>
     <access_arguments>access CiviCRM</access_arguments>

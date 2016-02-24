@@ -2,6 +2,75 @@
 
 require_once 'contactcampaign.civix.php';
 
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Implements hook_civicrm_tabset().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_config
+ */
+function contactcampaign_civicrm_tabset($tabsetName, &$tabs, $context) {
+  //check if the tabset is Contact Summary Page
+  if ($tabsetName == 'civicrm/contact/view') {
+          $contactId = $context['contact_id'];
+    $url = 'civicrm/campaignlist';
+
+    $tabs[] = array( 'id'    => 'contactCampaignTab',
+        'url'   => $url,
+        'qs' => 'cid=%%$contactId%%',
+        'title' => 'Contact Campaign',
+        'weight' => 300,
+    );
+  }
+}
+
+/**
+ * Implements hook_civicrm_dashboard().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_config
+ */
+function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement ) {
+    // REPLACE Activity Listing with custom content
+    $contentPlacement = 3;
+    //(int) CRM_Core_DAO::singleValueQuery('SELECT COUNT(*) FROM civicrm_campaign');
+    $query = "SELECT id, title, parent_id, status_id, goal_general, goal_revenue
+                  FROM civicrm_campaign
+                  WHERE created_id = $contactID";
+    $campaigns = CRM_Core_DAO::executeQuery($query);
+
+    $campaignList ='<table>';
+    $campaignList .= '<tr><th>Title</th><th>Contribution Page / Event</th><th>Status</th><th>Target Amount</th><th>Amount Raised</th><th>Number of Contributors</th></tr>';
+
+    while ($campaigns->fetch()) {
+
+     foreach($campaigns as $campaign){
+
+        $title = $campaign->title;
+        $targetAmount = $campaign->goal_general;
+        $raisedAmount = $campaign->goal_revenue;
+
+        $campaignList .=  '<tr>';
+        $campaignList .='<td>'.$title.'</td>';
+        $campaignList .= '<td>'.$targetAmount.'</td>';
+        $campaignList .= '<td>'.$raisedAmount.'</td>';
+        $campaignList .= '</tr>';
+     }
+    };
+    $campaignList .= '</table>';
+
+    return array (
+       'Campaign List'=> $campaignList
+    );
+}
 /**
  * Implements hook_civicrm_config().
  *
@@ -30,6 +99,19 @@ function contactcampaign_civicrm_xmlMenu(&$files) {
 function contactcampaign_civicrm_install() {
   _contactcampaign_civix_civicrm_install();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Implements hook_civicrm_uninstall().
