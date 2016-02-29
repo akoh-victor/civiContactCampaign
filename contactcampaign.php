@@ -2,17 +2,6 @@
 
 require_once 'contactcampaign.civix.php';
 
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Implements hook_civicrm_tabset().
  *
@@ -33,6 +22,8 @@ function contactcampaign_civicrm_tabset($tabsetName, &$tabs, $context) {
   }
 }
 
+
+
 /**
  * Implements hook_civicrm_dashboard().
  *
@@ -41,12 +32,10 @@ function contactcampaign_civicrm_tabset($tabsetName, &$tabs, $context) {
 function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
 {
     $contentPlacement = 3;
-    //Declare campaigns
-    $campaigns = [];
 
     try {
         //define Params
-        $params = array(
+       $params = array(
             'contact_id' => $contactID,
 
             'api.ContributionSoft.get' => [
@@ -57,89 +46,88 @@ function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
             ]
         );
 
-          // Making Api Calls
-        $campaigns = civicrm_api3('PCP', 'get', $params);
-        $campaigns = $this->generatePcpList($campaigns);
+               // Making Api Calls
+               $campaigns = civicrm_api3('PCP', 'get', $params);
+        if ($campaigns['count']){
+
+            $campaignList = '<table>';
+            $campaignList .= '<tr><th>Title</th><th>Status</th><th>Contribution Page / Event</th><th>Number of Contributions</th>
+                                     <th>Amount Raised</th><th>Target Amount</th>
+                                      <th></th></tr>';
+
+            foreach ($campaigns['values'] as $campaign) {
+                $pcpStatus = CRM_Contribute_PseudoConstant::pcpStatus();
+
+                // page id i.e contribution page or event
+                $PageId = $campaign['page_id'];
+
+                // page type  i.e contribution page or event
+                $page_type = $campaign['page_type'];
+
+                //link to edit page
+                $editAction = CRM_Utils_System::url('civicrm/pcp/info', 'action=update&reset=1&id=' . $PageId . '&context=dashboard');
+
+                if ($page_type == 'contribute') {
+                    $pageUrl = CRM_Utils_System::url('civicrm/' . $page_type . '/transact', 'reset=1&id=' . $PageId);
+                } else {
+                    $pageUrl = CRM_Utils_System::url('civicrm/' . $page_type . '/register', 'reset=1&id=' . $PageId);
+                }
+
+                //PCP title
+                $title = $campaign['title'];
+
+                //add status
+                $status = $pcpStatus[$campaign['status_id']];
+
+                #check/get number of contribution for campaign
+                $thereIs_contributions = $campaign["api.ContributionSoft.get"]['count'];
+
+                if($thereIs_contributions){
+                    //contributions
+                    $contributions = $campaign["api.ContributionSoft.get"]['values'];
+
+                    //amount raised
+                    $amountRaised = array_sum(array_column($contributions, 'amount'));
+                    //raisedAmount
+                    $raisedAmount = CRM_Utils_Money::format($amountRaised, $campaign['currency']);
+
+                    //targetAmount
+                    $targetAmount   = CRM_Utils_Money::format($campaign['goal_amount'], $campaign['currency']);
+
+                    //no of contributions
+                    $noContributions = $thereIs_contributions;
+                }
+
+                $campaignList .= '<tr>';
+                $campaignList .= '<td><a href="' . $pageUrl . '">' . $title . '</a></td>';
+                $campaignList .= '<td>' . $status . '</td>';
+                $campaignList .= '<td>'. $page_type.'</td>';
+                $campaignList .= '<td>'. $noContributions.'</td>';
+                $campaignList .=  '<td>'.$raisedAmount.'</td>';
+                $campaignList .=  '<td>'.$targetAmount.'</td>';
+                $campaignList .= '<td><a href="' . $editAction . '"> Edit </a></td>';
+
+                $campaignList .= '</tr>';
+
+            };
+
+            $campaignList .= '</table>';
+
+
+        }else{
+            $campaignList = 'user has not created a pcp';
+        }
+
 
     } catch (CiviCRM_API3_Exception $e) {
         $error = $e->getMessage();
     }
 
     return array(
-        'Campaign List' => $campaigns,
+        $campaignList
     );
 
 }
-function generatePcpList($campaigns)
-{
-    if ($campaigns['count']){
-
-        $campaignList = '<table>';
-        $campaignList .= '<tr><th>Title</th><th>Status</th><th>Contribution Page / Event</th><th>Number of Contributions</th>
-                            <th>Amount Raised</th><th>Target Amount</th>
-                              <th></th></tr>';
-
-    foreach ($campaigns['values'] as $key => $campaign) {
-        $pcpStatus = CRM_Contribute_PseudoConstant::pcpStatus();
-
-        // page id i.e contribution page or event
-        $PageId = $campaign['page_id'];
-
-        // page type  i.e contribution page or event
-        $page_type = $campaign['page_type'];
-
-        //link to edit page
-        $editAction = CRM_Utils_System::url('civicrm/pcp/info', 'action=update&reset=1&id=' . $PageId . '&context=dashboard');
-
-        if ($page_type == 'contribute') {
-            $pageUrl = CRM_Utils_System::url('civicrm/' . $page_type . '/transact', 'reset=1&id=' . $PageId);
-        } else {
-            $pageUrl = CRM_Utils_System::url('civicrm/' . $page_type . '/register', 'reset=1&id=' . $PageId);
-        }
-
-        //PCP title
-         $title = $campaign['title'];
-
-        //add status
-        $status = $pcpStatus[$campaign['status_id']];
-
-        #check/get number of contribution for campaign
-        $thereIs_contributions = $campaign["api.ContributionSoft.get"]['count'];
-
-        if($thereIs_contributions){
-            //contributions
-            $contributions = $campaign["api.ContributionSoft.get"]['values'];
-
-            //amount raised
-            $amount_raised = array_sum(array_column($contributions, 'amount'));
-            //raisedAmount
-            $raisedAmount = CRM_Utils_Money::format($amount_raised, $campaign['currency']);
-
-            //targetAmount
-            $targetAmount   = CRM_Utils_Money::format($campaign['goal_amount'], $campaign['currency']);
-
-            //no of contributions
-            $noContributions = $thereIs_contributions;
-        }
-
-        $campaignList .= '<tr>';
-        $campaignList .= '<td><a href="' . $pageUrl . '">' . $title . '</a></td>';
-        $campaignList .= '<td>' . $status . '</td>';
-        $campaignList .= '<td>'. $page_type.'</td>';
-        $campaignList .= '<td>'. $noContributions.'</td>';
-        $campaignList .=  '<td>'.$raisedAmount.'</td>';
-        $campaignList .=  '<td>'.$targetAmount.'</td>';
-        $campaignList .= '<td><a href="' . $editAction . '"> ' . 'Edit' . '</a></td>';
-
-        $campaignList .= '</tr>';
-
-    };
-
-    $campaignList .= '</table>';
-}
-    return $campaignList;
-}
-
 
 /**
  * Implements hook_civicrm_config().
