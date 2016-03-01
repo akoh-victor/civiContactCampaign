@@ -11,13 +11,29 @@ function contactcampaign_civicrm_tabset($tabsetName, &$tabs, $context) {
   //check if the tabset is Contact Summary Page
   if ($tabsetName == 'civicrm/contact/view') {
           $contactId = $context['contact_id'];
-    $url = 'civicrm/campaignlist';
+         $url = 'civicrm/campaignlist';
+      //set the id of the selected contact to session
+       $session = CRM_Core_Session::singleton();
+       $session->set('SelUser',$contactId);
+
+
+     //SET params
+      $params = array(
+          'contact_id' => $contactId,
+      );
+
+      // Making Api Calls
+       @ $contactCampaigns = civicrm_api3('PCP', 'get', $params);
+
+      //get the number of pcp created by user
+       @$thereIsCampaign = $contactCampaigns['count'];
 
     $tabs[] = array( 'id'    => 'contactCampaignTab',
         'url'   => $url,
         'qs' => 'cid=%%$contactId%%',
         'title' => 'Contact Campaign',
         'weight' => 300,
+        'count'=> $thereIsCampaign,
     );
   }
 }
@@ -31,13 +47,23 @@ function contactcampaign_civicrm_tabset($tabsetName, &$tabs, $context) {
  */
 function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
 {
+
+    //get the id of the selected contact from the session
+    $session = CRM_Core_Session::singleton();
+    $selContact = $session->get('SelUser');
+
+
+     $currentTab =  CRM_Utils_System::currentPath();
+
+    if ($currentTab == 'civicrm/contact/civicrm/campaignlist'){
+
+
     $contentPlacement = 3;
 
     try {
         //define Params
        $params = array(
-            'contact_id' => $contactID,
-
+            'contact_id' => $selContact,
             'api.ContributionSoft.get' => [
                 'pcp_id' => '$value.id'
             ],
@@ -50,8 +76,8 @@ function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
                $campaigns = civicrm_api3('PCP', 'get', $params);
         if ($campaigns['count']){
 
-            $campaignList = '<table>';
-            $campaignList .= '<tr><th>Title</th><th>Status</th><th>Contribution Page / Event</th><th>Number of Contributions</th>
+            $campaignList = '<table class="selector" >';
+            $campaignList .= '<tr class="columnheader"><th>Title</th><th>Status</th><th>Contribution Page / Event</th><th>Number of Contributions</th>
                                      <th>Amount Raised</th><th>Target Amount</th>
                                       <th></th></tr>';
 
@@ -98,7 +124,7 @@ function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
                     $noContributions = $thereIs_contributions;
                 }
 
-                $campaignList .= '<tr>';
+                $campaignList .= '<tr class="odd">';
                 $campaignList .= '<td><a href="' . $pageUrl . '">' . $title . '</a></td>';
                 $campaignList .= '<td>' . $status . '</td>';
                 $campaignList .= '<td>'. $page_type.'</td>';
@@ -115,7 +141,10 @@ function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
 
 
         }else{
-            $campaignList = 'user has not created a pcp';
+            //User created zero campaign page. :-)
+            $message = "";
+            $message.= '<div ><p style="background-color: beige;padding: 2px 5px; border: solid 1px orange;">Its lonely here!!! Please create a Personal Campaign Page to view</p></div>';
+            $campaignList = $message;
         }
 
 
@@ -123,9 +152,13 @@ function contactcampaign_civicrm_dashboard( $contactID, &$contentPlacement )
         $error = $e->getMessage();
     }
 
+
+
     return array(
-        $campaignList
+        ''=>$campaignList,
     );
+
+    }
 
 }
 
